@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat \"$CLAUDE_PROJECT_ROOT/.claude/skills/using-m11n/SKILL.md\""
+          }
+        ]
+      }
+    ]
+  }
+}
