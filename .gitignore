@@ -1,2 +1,12 @@
 /my-playground
 *.env
+.env.*
+!.env.local.example
+
+# Lambda ビルド成果物
+/tmp/bootstrap
+*.zip
+
+# AWS 認証情報
+.aws/
+credentials
