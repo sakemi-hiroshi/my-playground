@@ -150,8 +150,8 @@ if errors.As(err, &nfe) { /* nfe.ID が使える */ }
 // 文字列比較でエラーを判定しない
 if err.Error() == "book not found" { /* 壊れやすい */ }
 
-// fmt.Errorf だけではエラー型が失われる
-return fmt.Errorf("book not found: %w", err) // As で取れなくなる
+// fmt.Errorf だけで文字列として表現すると、ID 付きのカスタム型を返せない
+return fmt.Errorf("book not found: id=%d", id) // errors.As で *BookNotFoundError は取り出せない
 ```
 
 ---
