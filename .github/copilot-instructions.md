@@ -44,3 +44,34 @@ type Book struct {
 ## 設計が必要な複雑なissue
 
 設計の壁打ちが必要な場合は Copilot ではなく Claude Code（issue-design スキル）で対応する。
+
+## 実装原則
+
+詳細は `.github/skills/go-design-principles/SKILL.md` を参照。以下の原則を遵守する:
+
+- **Always-Valid Domain**: ドメイン型はコンストラクタ経由でのみ生成し `Validate()` で検証。生 struct リテラル禁止。
+- **panic と error の役割分離**: 契約違反は panic、業務エラー・外部入力エラーは error で返す。
+- **Tell, Don't Ask**: 業務判定はドメインに持たせ、ハンドラは薄いオーケストレーターに留める。
+- **Sentinel Error と詳細エラー型**: `Err*` 変数（`errors.Is` 用）と struct 型（`errors.As` 用）を対で定義し `Unwrap()` でチェーン維持。
+- **層間エラー変換**: repository のエラーをそのまま handler に返さず、自層エラーに変換してから返す。
+
+## PRレビュー観点
+
+詳細は `.github/skills/code-review-lenses/SKILL.md` を参照。レビューは以下の4観点と重大度分類で行う。
+
+### 4観点
+1. **バグ**: 境界値・nil・競合状態・エラー握りつぶし
+2. **セキュリティ**: 入力検証・機微情報のログ漏れ・インジェクション
+3. **パフォーマンス**: 不要なアロケーション・N+1・mutex の粒度
+4. **保守性**: 単一責任・命名・テスト容易性・過剰な抽象化
+
+### 重大度
+- **Critical**: 本番障害・データ損失・脆弱性 → マージブロック推奨
+- **Important**: 品質劣化・将来のバグ温床 → マージブロック推奨
+- **Suggestion**: 改善提案
+- **Informational**: 知識共有
+
+### Go 固有追加観点
+- `context.Context` を下位層まで伝搬しているか
+- `errors.Is` / `errors.As` が使えるようにエラーチェーンを維持しているか
+- interface は呼び出し側に必要なメソッドだけを持つ小さな単位か
