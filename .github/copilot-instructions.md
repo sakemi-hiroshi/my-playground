@@ -57,6 +57,8 @@ type Book struct {
 
 ## PRレビュー観点
 
+**PRレビューを行う際は、必ず `.github/skills/code-review-lenses/SKILL.md` を読み込み、そこに記載された指示にすべて従うこと。**
+
 詳細は `.github/skills/code-review-lenses/SKILL.md` を参照。レビューは以下の4観点と重大度分類で行う。
 
 ### 4観点
