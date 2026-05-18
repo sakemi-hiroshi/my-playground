@@ -49,5 +49,6 @@ type Book struct {
 
 **PRレビューを行う際は、必ず `.github/skills/code-review-lenses/SKILL.md` を読み込み、そこに記載された指示にすべて従うこと。**
 **Tell, Don't Ask 違反の疑いがあれば `.github/skills/tell-dont-ask/SKILL.md` を併用すること。**
+**簡素化・YAGNI・dead code の指摘を行う場合は `.github/skills/simplifying-code/SKILL.md` を参照すること。**
 
 レビューは4観点（バグ／セキュリティ／パフォーマンス／保守性）と Critical / Important / Suggestion の重大度分類で行う。
