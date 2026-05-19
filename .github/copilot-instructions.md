@@ -41,6 +41,8 @@ type Book struct {
 - 外部依存ライブラリは追加しない（標準ライブラリのみ）
 - テストを追加する場合は `_test.go` ファイルに記述する
 
+**実装タスクを担当する場合は、必ず `.github/skills/implementing-feature/SKILL.md` を読み、観点に従うこと。**
+
 ## 設計が必要な複雑なissue
 
 設計の壁打ちが必要な場合は Copilot ではなく Claude Code（issue-design スキル）で対応する。
