@@ -28,6 +28,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
+	case path == "/search" || path == "/search/":
+		switch r.Method {
+		case http.MethodGet:
+			h.search(w, r)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
 	default:
 		idStr := strings.TrimPrefix(path, "/")
 		id, err := strconv.Atoi(idStr)
@@ -46,6 +53,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
 	}
+}
+
+func (h *Handler) search(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query().Get("q")
+	writeJSON(w, http.StatusOK, h.repo.FindByKeyword(query))
 }
 
 func (h *Handler) list(w http.ResponseWriter, _ *http.Request) {
