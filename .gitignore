@@ -10,3 +10,5 @@
 # AWS 認証情報
 .aws/
 credentials
+
+.claude/settings.local.json
