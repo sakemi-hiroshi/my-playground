@@ -2,6 +2,7 @@ package book
 
 import (
 	"errors"
+	"strings"
 	"sync"
 )
 
@@ -57,6 +58,19 @@ func (r *Repository) Update(b *Book) error {
 	}
 	r.books[b.ID] = b
 	return nil
+}
+
+func (r *Repository) FindByKeyword(keyword string) []*Book {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	kw := strings.ToLower(keyword)
+	result := make([]*Book, 0)
+	for _, b := range r.books {
+		if strings.Contains(strings.ToLower(b.Title), kw) || strings.Contains(strings.ToLower(b.Author), kw) {
+			result = append(result, b)
+		}
+	}
+	return result
 }
 
 func (r *Repository) Delete(id int) error {

@@ -28,6 +28,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
+	case path == "/search":
+		switch r.Method {
+		case http.MethodGet:
+			h.search(w, r)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
 	default:
 		idStr := strings.TrimPrefix(path, "/")
 		id, err := strconv.Atoi(idStr)
