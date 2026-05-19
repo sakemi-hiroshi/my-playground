@@ -32,15 +32,13 @@ func (r *Repository) FindAll() []*Book {
 }
 
 func (r *Repository) FindByKeyword(q string) []*Book {
+	if q == "" {
+		return r.FindAll()
+	}
+
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	result := make([]*Book, 0, len(r.books))
-	if q == "" {
-		for _, b := range r.books {
-			result = append(result, b)
-		}
-		return result
-	}
 	for _, b := range r.books {
 		if strings.Contains(b.Title, q) || strings.Contains(b.Author, q) {
 			result = append(result, b)
