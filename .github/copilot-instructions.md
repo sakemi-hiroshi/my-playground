@@ -34,6 +34,10 @@ type Book struct {
 | PUT    | /books/{id} | 更新         |
 | DELETE | /books/{id} | 削除         |
 
+## 言語
+
+コミットメッセージ・PR タイトル・PR 本文・issue コメントはすべて**日本語**で書くこと。
+
 ## Copilot agentへの期待役割
 
 - シンプルな機能追加・修正issueを担当する
