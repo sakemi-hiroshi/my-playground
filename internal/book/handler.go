@@ -56,7 +56,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filtered := make([]*Book, 0, len(books))
+	filtered := make([]*Book, 0)
 	for _, b := range books {
 		if strings.Contains(b.Title, keyword) || strings.Contains(b.Author, keyword) {
 			filtered = append(filtered, b)

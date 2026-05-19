@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestHandler_listWithQuery(t *testing.T) {
+func TestHandler_list_query(t *testing.T) {
 	repo := NewRepository()
 	repo.Save(&Book{Title: "Go言語入門", Author: "田中太郎", ISBN: "111"})
 	repo.Save(&Book{Title: "分散システム", Author: "Go研究会", ISBN: "222"})
