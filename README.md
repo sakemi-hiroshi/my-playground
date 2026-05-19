@@ -8,6 +8,7 @@ Go製のシンプルな Book CRUD API。
 
 ```
 GET    /books
+GET    /books?q=<キーワード>
 POST   /books
 GET    /books/{id}
 PUT    /books/{id}

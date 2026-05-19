@@ -48,8 +48,22 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) list(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, h.repo.FindAll())
+func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
+	keyword := r.URL.Query().Get("q")
+	books := h.repo.FindAll()
+	if keyword == "" {
+		writeJSON(w, http.StatusOK, books)
+		return
+	}
+
+	filtered := make([]*Book, 0, len(books))
+	for _, b := range books {
+		if strings.Contains(b.Title, keyword) || strings.Contains(b.Author, keyword) {
+			filtered = append(filtered, b)
+		}
+	}
+
+	writeJSON(w, http.StatusOK, filtered)
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
