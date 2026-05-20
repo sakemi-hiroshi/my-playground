@@ -33,7 +33,7 @@ func (r *Repository) FindAll() []*Book {
 func (r *Repository) FindByAuthor(author string) []*Book {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	result := make([]*Book, 0)
+	result := make([]*Book, 0, len(r.books))
 	for _, b := range r.books {
 		if b.Author == author {
 			result = append(result, b)
