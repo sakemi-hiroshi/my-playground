@@ -48,7 +48,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) list(w http.ResponseWriter, _ *http.Request) {
+func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
+	author := r.URL.Query().Get("author")
+	if author != "" {
+		writeJSON(w, http.StatusOK, h.repo.FindByAuthor(author))
+		return
+	}
 	writeJSON(w, http.StatusOK, h.repo.FindAll())
 }
 

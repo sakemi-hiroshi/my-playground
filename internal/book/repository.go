@@ -30,6 +30,18 @@ func (r *Repository) FindAll() []*Book {
 	return result
 }
 
+func (r *Repository) FindByAuthor(author string) []*Book {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	result := make([]*Book, 0)
+	for _, b := range r.books {
+		if b.Author == author {
+			result = append(result, b)
+		}
+	}
+	return result
+}
+
 func (r *Repository) FindByID(id int) (*Book, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
