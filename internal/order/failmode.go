@@ -12,7 +12,7 @@ const (
 	NoReply Kind = "noreply"
 )
 
-// FailMode テストでエラーや遅延をシミュレートするための構造体です。
+// FailMode はテストでエラーや遅延をシミュレートするための構造体です。
 type FailMode struct {
 	Kind  Kind
 	Delay time.Duration
