@@ -6,6 +6,9 @@ import (
 	"time"
 
 	"github.com/asynkron/protoactor-go/actor"
+	"github.com/sakemi-hiroshi/my-playground/internal/order/coupon"
+	"github.com/sakemi-hiroshi/my-playground/internal/order/payment"
+	"github.com/sakemi-hiroshi/my-playground/internal/order/point"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -40,12 +43,12 @@ type stubCouponActor struct {
 
 func (s *stubCouponActor) Receive(ctx actor.Context) {
 	switch msg := ctx.Message().(type) {
-	case ApplyCoupon:
+	case coupon.ApplyCoupon:
 		_ = msg
 		ctx.Respond(s.applyResult)
-	case ReleaseCoupon:
+	case coupon.ReleaseCoupon:
 		s.rec.record("coupon.release")
-		ctx.Respond(CouponReleased{OrderID: msg.OrderID})
+		ctx.Respond(coupon.CouponReleased{OrderID: msg.OrderID})
 	}
 }
 
@@ -56,12 +59,12 @@ type stubPointActor struct {
 
 func (s *stubPointActor) Receive(ctx actor.Context) {
 	switch msg := ctx.Message().(type) {
-	case UsePoint:
+	case point.UsePoint:
 		_ = msg
 		ctx.Respond(s.useResult)
-	case RefundPoint:
+	case point.RefundPoint:
 		s.rec.record("point.refund")
-		ctx.Respond(PointRefunded{OrderID: msg.OrderID})
+		ctx.Respond(point.PointRefunded{OrderID: msg.OrderID})
 	}
 }
 
@@ -72,12 +75,12 @@ type stubPaymentActor struct {
 
 func (s *stubPaymentActor) Receive(ctx actor.Context) {
 	switch msg := ctx.Message().(type) {
-	case Charge:
+	case payment.Charge:
 		_ = msg
 		ctx.Respond(s.chargeResult)
-	case Refund:
+	case payment.Refund:
 		s.rec.record("payment.refund")
-		ctx.Respond(PaymentRefunded{OrderID: msg.OrderID})
+		ctx.Respond(payment.PaymentRefunded{OrderID: msg.OrderID})
 	}
 }
 
@@ -94,30 +97,30 @@ func TestOrderActor_SagaFlow(t *testing.T) {
 	}{
 		{
 			name:              "全成功_completed",
-			couponResult:      CouponApplied{OrderID: "o1", CouponID: "C100", DiscountYen: 100},
-			pointResult:       PointUsed{OrderID: "o1", Amount: 100},
-			paymentResult:     PaymentCompleted{OrderID: "o1", AmountYen: 900},
+			couponResult:      coupon.CouponApplied{OrderID: "o1", CouponID: "C100", DiscountYen: 100},
+			pointResult:       point.PointUsed{OrderID: "o1", Amount: 100},
+			paymentResult:     payment.PaymentCompleted{OrderID: "o1", AmountYen: 900},
 			wantStatus:        StatusCompleted,
 			wantCompensations: []string{},
 		},
 		{
 			name:              "クーポン失敗_補償なし_failed",
-			couponResult:      CouponRejected{OrderID: "o1", Reason: "invalid coupon"},
+			couponResult:      coupon.CouponRejected{OrderID: "o1", Reason: "invalid coupon"},
 			wantStatus:        StatusFailed,
 			wantCompensations: []string{},
 		},
 		{
 			name:              "ポイント失敗_クーポンのみ補償_failed",
-			couponResult:      CouponApplied{OrderID: "o1", CouponID: "C100", DiscountYen: 100},
-			pointResult:       PointRejected{OrderID: "o1", Reason: "insufficient points"},
+			couponResult:      coupon.CouponApplied{OrderID: "o1", CouponID: "C100", DiscountYen: 100},
+			pointResult:       point.PointRejected{OrderID: "o1", Reason: "insufficient points"},
 			wantStatus:        StatusFailed,
 			wantCompensations: []string{"coupon.release"},
 		},
 		{
 			name:              "決済失敗_ポイントとクーポンを逆順補償_failed",
-			couponResult:      CouponApplied{OrderID: "o1", CouponID: "C100", DiscountYen: 100},
-			pointResult:       PointUsed{OrderID: "o1", Amount: 100},
-			paymentResult:     PaymentFailed{OrderID: "o1", Reason: "card declined"},
+			couponResult:      coupon.CouponApplied{OrderID: "o1", CouponID: "C100", DiscountYen: 100},
+			pointResult:       point.PointUsed{OrderID: "o1", Amount: 100},
+			paymentResult:     payment.PaymentFailed{OrderID: "o1", Reason: "card declined"},
 			wantStatus:        StatusFailed,
 			wantCompensations: []string{"point.refund", "coupon.release"},
 		},

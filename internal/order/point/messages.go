@@ -1,10 +1,12 @@
-package order
+package point
+
+import "github.com/sakemi-hiroshi/my-playground/internal/order/faultinjection"
 
 type (
 	UsePoint struct {
 		OrderID        string
 		Amount         int
-		FaultInjection FaultInjection
+		FaultInjection faultinjection.FaultInjection
 	}
 
 	PointUsed struct {

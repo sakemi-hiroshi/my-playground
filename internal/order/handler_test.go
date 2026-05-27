@@ -9,6 +9,9 @@ import (
 
 	"github.com/asynkron/protoactor-go/actor"
 	"github.com/labstack/echo/v4"
+	"github.com/sakemi-hiroshi/my-playground/internal/order/coupon"
+	"github.com/sakemi-hiroshi/my-playground/internal/order/payment"
+	"github.com/sakemi-hiroshi/my-playground/internal/order/point"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -18,9 +21,9 @@ func setup(t *testing.T) (*actor.ActorSystem, *actor.PID, *actor.PID, *actor.PID
 	system := actor.NewActorSystem()
 	t.Cleanup(func() { system.Shutdown() })
 
-	couponPID := system.Root.Spawn(actor.PropsFromProducer(NewCouponActor))
-	pointPID := system.Root.Spawn(actor.PropsFromProducer(NewPointActor))
-	paymentPID := system.Root.Spawn(actor.PropsFromProducer(NewPaymentActor))
+	couponPID := system.Root.Spawn(actor.PropsFromProducer(coupon.NewCouponActor))
+	pointPID := system.Root.Spawn(actor.PropsFromProducer(point.NewPointActor))
+	paymentPID := system.Root.Spawn(actor.PropsFromProducer(payment.NewPaymentActor))
 	return system, couponPID, pointPID, paymentPID
 }
 

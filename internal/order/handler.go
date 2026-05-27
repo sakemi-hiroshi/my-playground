@@ -6,6 +6,7 @@ import (
 
 	"github.com/asynkron/protoactor-go/actor"
 	"github.com/labstack/echo/v4"
+	"github.com/sakemi-hiroshi/my-playground/internal/order/faultinjection"
 )
 
 type FailModeRequest struct {
@@ -93,10 +94,10 @@ func toOrderFailModes(r FailModesRequest) FailModes {
 	}
 }
 
-func toFailMode(r FailModeRequest) FaultInjection {
+func toFailMode(r FailModeRequest) faultinjection.FaultInjection {
 	d, _ := time.ParseDuration(r.Delay)
-	return FaultInjection{
-		Kind:  Kind(r.Kind),
+	return faultinjection.FaultInjection{
+		Kind:  faultinjection.Kind(r.Kind),
 		Delay: d,
 	}
 }
