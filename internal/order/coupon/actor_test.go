@@ -1,10 +1,11 @@
-package order
+package coupon
 
 import (
 	"testing"
 	"time"
 
 	"github.com/asynkron/protoactor-go/actor"
+	"github.com/sakemi-hiroshi/my-playground/internal/order/faultinjection"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -25,25 +26,25 @@ func TestCouponActor_ApplyCoupon(t *testing.T) {
 		},
 		{
 			name:     "FaultInjection=fail_CouponRejectedが返る",
-			msg:      ApplyCoupon{OrderID: "ord-2", CouponID: "C100", FaultInjection: FaultInjection{Kind: Fail}},
+			msg:      ApplyCoupon{OrderID: "ord-2", CouponID: "C100", FaultInjection: faultinjection.FaultInjection{Kind: faultinjection.Fail}},
 			wantType: CouponRejected{},
 			timeout:  time.Second,
 		},
 		{
 			name:     "FaultInjection=delay_遅延後にCouponAppliedが返る",
-			msg:      ApplyCoupon{OrderID: "ord-3", CouponID: "C100", FaultInjection: FaultInjection{Kind: Delay, Delay: 100 * time.Millisecond}},
+			msg:      ApplyCoupon{OrderID: "ord-3", CouponID: "C100", FaultInjection: faultinjection.FaultInjection{Kind: faultinjection.Delay, Delay: 100 * time.Millisecond}},
 			wantType: CouponApplied{},
 			timeout:  time.Second,
 		},
 		{
 			name:        "FaultInjection=noreply_タイムアウトになる",
-			msg:         ApplyCoupon{OrderID: "ord-4", CouponID: "C100", FaultInjection: FaultInjection{Kind: NoReply}},
+			msg:         ApplyCoupon{OrderID: "ord-4", CouponID: "C100", FaultInjection: faultinjection.FaultInjection{Kind: faultinjection.NoReply}},
 			wantTimeout: true,
 			timeout:     200 * time.Millisecond,
 		},
 		{
 			name:        "FaultInjection=panic_応答なしになる",
-			msg:         ApplyCoupon{OrderID: "ord-5", CouponID: "C100", FaultInjection: FaultInjection{Kind: Panic}},
+			msg:         ApplyCoupon{OrderID: "ord-5", CouponID: "C100", FaultInjection: faultinjection.FaultInjection{Kind: faultinjection.Panic}},
 			wantTimeout: true,
 			timeout:     500 * time.Millisecond,
 		},
@@ -90,7 +91,7 @@ func TestCouponActor_panic後にRestartして動作すること(t *testing.T) {
 
 	// panic させる（応答なしを期待）
 	_, err := system.Root.RequestFuture(pid, ApplyCoupon{
-		OrderID: "ord-5", CouponID: "C100", FaultInjection: FaultInjection{Kind: Panic},
+		OrderID: "ord-5", CouponID: "C100", FaultInjection: faultinjection.FaultInjection{Kind: faultinjection.Panic},
 	}, 500*time.Millisecond).Result()
 	assert.Error(t, err)
 

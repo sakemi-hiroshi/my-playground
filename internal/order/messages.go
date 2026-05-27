@@ -2,13 +2,15 @@ package order
 
 import (
 	"time"
+
+	"github.com/sakemi-hiroshi/my-playground/internal/order/faultinjection"
 )
 
 type (
 	FailModes struct {
-		Coupon  FaultInjection
-		Point   FaultInjection
-		Payment FaultInjection
+		Coupon  faultinjection.FaultInjection
+		Point   faultinjection.FaultInjection
+		Payment faultinjection.FaultInjection
 	}
 
 	StartOrder struct {

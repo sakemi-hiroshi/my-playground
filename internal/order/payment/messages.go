@@ -1,10 +1,12 @@
-package order
+package payment
+
+import "github.com/sakemi-hiroshi/my-playground/internal/order/faultinjection"
 
 type (
 	Charge struct {
 		OrderID        string
 		AmountYen      int
-		FaultInjection FaultInjection
+		FaultInjection faultinjection.FaultInjection
 	}
 
 	PaymentCompleted struct {

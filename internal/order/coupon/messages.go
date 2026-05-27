@@ -1,10 +1,12 @@
-package order
+package coupon
+
+import "github.com/sakemi-hiroshi/my-playground/internal/order/faultinjection"
 
 type (
 	ApplyCoupon struct {
 		OrderID        string
 		CouponID       string
-		FaultInjection FaultInjection
+		FaultInjection faultinjection.FaultInjection
 	}
 
 	CouponApplied struct {
