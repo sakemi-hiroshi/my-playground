@@ -87,15 +87,15 @@ func (h *OrderHandler) PostOrder(c echo.Context) error {
 
 func toOrderFailModes(r FailModesRequest) FailModes {
 	return FailModes{
-		Coupon:  toFailMode(r.Coupon),
-		Point:   toFailMode(r.Point),
-		Payment: toFailMode(r.Payment),
+		Coupon:  toFaultInjection(r.Coupon),
+		Point:   toFaultInjection(r.Point),
+		Payment: toFaultInjection(r.Payment),
 	}
 }
 
-func toFailMode(r FailModeRequest) FailMode {
+func toFaultInjection(r FailModeRequest) FaultInjection {
 	d, _ := time.ParseDuration(r.Delay)
-	return FailMode{
+	return FaultInjection{
 		Kind:  Kind(r.Kind),
 		Delay: d,
 	}

@@ -2,9 +2,9 @@ package order
 
 type (
 	ApplyCoupon struct {
-		OrderID  string
-		CouponID string
-		FailMode FailMode
+		OrderID        string
+		CouponID       string
+		FaultInjection FaultInjection
 	}
 
 	CouponApplied struct {
