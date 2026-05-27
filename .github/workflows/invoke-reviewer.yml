@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   invoke-reviewer:
-    if: contains(github.event.pull_request.user.login, 'copilot-swe-agent')
+    if: contains(tolower(github.event.pull_request.user.login), 'copilot')
     runs-on: ubuntu-latest
 
     steps:
@@ -24,13 +24,13 @@ jobs:
         run: |
           # reviewer が投稿したコメントを取得
           REVIEWER_COMMENTS=$(gh api repos/$REPO/issues/$PR_NUMBER/comments \
-            --jq '[.[] | select(.user.login == "copilot-swe-agent")] | length')
+            --jq '[.[] | select(.user.login == "copilot-swe-agent" or (.user.login | ascii_downcase) == "copilot")] | length')
 
           echo "reviewer_comment_count=$REVIEWER_COMMENTS" >> $GITHUB_OUTPUT
 
           # 直近のコメントが review-passed マーカーを含むか確認
           LATEST_BODY=$(gh api repos/$REPO/issues/$PR_NUMBER/comments \
-            --jq '[.[] | select(.user.login == "copilot-swe-agent")] | last | .body // ""')
+            --jq '[.[] | select(.user.login == "copilot-swe-agent" or (.user.login | ascii_downcase) == "copilot")] | last | .body // ""')
 
           if echo "$LATEST_BODY" | grep -q "review-passed"; then
             echo "already_passed=true" >> $GITHUB_OUTPUT
@@ -88,7 +88,7 @@ jobs:
 
           # 前回の reviewer コメント取得（あれば）
           PREV_REVIEW=$(gh api repos/$REPO/issues/$PR_NUMBER/comments \
-            --jq '[.[] | select(.user.login == "copilot-swe-agent")] | last | .body // "(前回の指摘なし)"')
+            --jq '[.[] | select(.user.login == "copilot-swe-agent" or (.user.login | ascii_downcase) == "copilot")] | last | .body // "(前回の指摘なし)"')
 
           # PR 本文末尾に context を追記
           CURRENT_BODY=$(gh pr view $PR_NUMBER --repo $REPO --json body --jq '.body')
