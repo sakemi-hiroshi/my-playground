@@ -81,6 +81,76 @@ func (s *stubPaymentActor) Receive(ctx actor.Context) {
 	}
 }
 
+// stubCouponActorWithTimeouts は最初の N 回は応答せず（タイムアウト模擬）、その後 result を返す
+type stubCouponActorWithTimeouts struct {
+	timeoutCount int // 応答しない回数
+	result       interface{}
+	rec          *recorder
+	callCount    int
+}
+
+func (s *stubCouponActorWithTimeouts) Receive(ctx actor.Context) {
+	switch msg := ctx.Message().(type) {
+	case ApplyCoupon:
+		_ = msg
+		if s.callCount < s.timeoutCount {
+			s.callCount++
+			// 応答しない（タイムアウトを模擬）
+			return
+		}
+		ctx.Respond(s.result)
+	case ReleaseCoupon:
+		s.rec.record("coupon.release")
+		ctx.Respond(CouponReleased{OrderID: msg.OrderID})
+	}
+}
+
+// stubPointActorWithTimeouts は最初の N 回は応答せず（タイムアウト模擬）、その後 result を返す
+type stubPointActorWithTimeouts struct {
+	timeoutCount int
+	result       interface{}
+	rec          *recorder
+	callCount    int
+}
+
+func (s *stubPointActorWithTimeouts) Receive(ctx actor.Context) {
+	switch msg := ctx.Message().(type) {
+	case UsePoint:
+		_ = msg
+		if s.callCount < s.timeoutCount {
+			s.callCount++
+			return
+		}
+		ctx.Respond(s.result)
+	case RefundPoint:
+		s.rec.record("point.refund")
+		ctx.Respond(PointRefunded{OrderID: msg.OrderID})
+	}
+}
+
+// stubPaymentActorWithTimeouts は最初の N 回は応答せず（タイムアウト模擬）、その後 result を返す
+type stubPaymentActorWithTimeouts struct {
+	timeoutCount int
+	result       interface{}
+	rec          *recorder
+	callCount    int
+}
+
+func (s *stubPaymentActorWithTimeouts) Receive(ctx actor.Context) {
+	switch msg := ctx.Message().(type) {
+	case Charge:
+		_ = msg
+		if s.callCount < s.timeoutCount {
+			s.callCount++
+			return
+		}
+		ctx.Respond(s.result)
+	case Refund:
+		s.rec.record("payment.refund")
+		ctx.Respond(PaymentRefunded{OrderID: msg.OrderID})
+	}
+}
+
 // --- テスト ---
 
 func TestOrderActor_SagaFlow(t *testing.T) {
@@ -145,6 +215,104 @@ func TestOrderActor_SagaFlow(t *testing.T) {
 				CouponID:    "C100",
 				PointAmount: 100,
 				AmountYen:   1000,
+			}, 5*time.Second).Result()
+
+			require.NoError(t, err)
+			got, ok := res.(OrderResult)
+			require.True(t, ok)
+			assert.Equal(t, tt.wantStatus, got.Status)
+			assert.Equal(t, tt.wantCompensations, rec.snapshot())
+		})
+	}
+}
+
+func TestOrderActor_RetryOnTimeout(t *testing.T) {
+	// タイムアウトを短くしてテストを高速化
+	orig := receiveTimeout
+	receiveTimeout = 100 * time.Millisecond
+	t.Cleanup(func() { receiveTimeout = orig })
+
+	tests := []struct {
+		name              string
+		maxRetries        int
+		couponTimeouts    int
+		pointTimeouts     int
+		paymentTimeouts   int
+		couponResult      interface{}
+		pointResult       interface{}
+		paymentResult     interface{}
+		wantStatus        OrderStatus
+		wantCompensations []string
+	}{
+		{
+			name:              "MaxRetries=2_1回タイムアウト後に成功_completed",
+			maxRetries:        2,
+			couponTimeouts:    1,
+			couponResult:      CouponApplied{OrderID: "o1", CouponID: "C100", DiscountYen: 100},
+			pointResult:       PointUsed{OrderID: "o1", Amount: 100},
+			paymentResult:     PaymentCompleted{OrderID: "o1", AmountYen: 900},
+			wantStatus:        StatusCompleted,
+			wantCompensations: []string{},
+		},
+		{
+			name:              "MaxRetries=2_リトライ上限超え_補償に移行_failed",
+			maxRetries:        2,
+			couponTimeouts:    3, // MaxRetries=2 を超える（0回目 + retry1 + retry2 で上限、3回目もタイムアウト）
+			couponResult:      CouponApplied{OrderID: "o1", CouponID: "C100", DiscountYen: 100},
+			wantStatus:        StatusFailed,
+			wantCompensations: []string{},
+		},
+		{
+			name:              "MaxRetries=0_タイムアウト即補償_failed",
+			maxRetries:        0,
+			couponTimeouts:    1,
+			couponResult:      CouponApplied{OrderID: "o1", CouponID: "C100", DiscountYen: 100},
+			wantStatus:        StatusFailed,
+			wantCompensations: []string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			system := actor.NewActorSystem()
+			t.Cleanup(func() { system.Shutdown() })
+
+			rec := &recorder{}
+			couponPID := system.Root.Spawn(actor.PropsFromProducer(func() actor.Actor {
+				return &stubCouponActorWithTimeouts{
+					timeoutCount: tt.couponTimeouts,
+					result:       tt.couponResult,
+					rec:          rec,
+				}
+			}))
+			pointPID := system.Root.Spawn(actor.PropsFromProducer(func() actor.Actor {
+				if tt.pointTimeouts > 0 {
+					return &stubPointActorWithTimeouts{
+						timeoutCount: tt.pointTimeouts,
+						result:       tt.pointResult,
+						rec:          rec,
+					}
+				}
+				return &stubPointActor{useResult: tt.pointResult, rec: rec}
+			}))
+			paymentPID := system.Root.Spawn(actor.PropsFromProducer(func() actor.Actor {
+				if tt.paymentTimeouts > 0 {
+					return &stubPaymentActorWithTimeouts{
+						timeoutCount: tt.paymentTimeouts,
+						result:       tt.paymentResult,
+						rec:          rec,
+					}
+				}
+				return &stubPaymentActor{chargeResult: tt.paymentResult, rec: rec}
+			}))
+
+			orderPID := system.Root.Spawn(NewOrderActorProps(couponPID, pointPID, paymentPID))
+			res, err := system.Root.RequestFuture(orderPID, StartOrder{
+				OrderID:     "o1",
+				CouponID:    "C100",
+				PointAmount: 100,
+				AmountYen:   1000,
+				MaxRetries:  tt.maxRetries,
 			}, 5*time.Second).Result()
 
 			require.NoError(t, err)

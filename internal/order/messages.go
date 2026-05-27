@@ -18,6 +18,7 @@ type (
 		AmountYen         int
 		FailModes         FailModes
 		RandomFailureRate float64
+		MaxRetries        int // 0 = リトライなし（既存挙動と同じ）
 	}
 
 	OrderStatus string
