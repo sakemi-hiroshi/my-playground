@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   invoke-reviewer:
-    if: contains(tolower(github.event.pull_request.user.login), 'copilot')
+    if: github.event.pull_request.user.login == 'Copilot' || github.event.pull_request.user.login == 'copilot-swe-agent' || contains(github.event.pull_request.user.login, 'copilot')
     runs-on: ubuntu-latest
 
     steps:
