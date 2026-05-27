@@ -1,0 +1,144 @@
+name: Invoke Reviewer
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  pull-requests: write
+  issues: read
+  contents: read
+
+jobs:
+  invoke-reviewer:
+    if: github.event.pull_request.user.login == 'copilot-swe-agent'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check loop termination conditions
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          # reviewer が投稿したコメントを取得
+          REVIEWER_COMMENTS=$(gh api repos/$REPO/issues/$PR_NUMBER/comments \
+            --jq '[.[] | select(.user.login == "copilot-swe-agent")] | length')
+
+          echo "reviewer_comment_count=$REVIEWER_COMMENTS" >> $GITHUB_OUTPUT
+
+          # 直近のコメントが review-passed マーカーを含むか確認
+          LATEST_BODY=$(gh api repos/$REPO/issues/$PR_NUMBER/comments \
+            --jq '[.[] | select(.user.login == "copilot-swe-agent")] | last | .body // ""')
+
+          if echo "$LATEST_BODY" | grep -q "review-passed"; then
+            echo "already_passed=true" >> $GITHUB_OUTPUT
+          else
+            echo "already_passed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Skip if already passed
+        if: steps.check.outputs.already_passed == 'true'
+        run: echo "review-passed マーカー確認済み。スキップします。"
+
+      - name: Add needs-human-review label if loop limit reached
+        if: steps.check.outputs.already_passed == 'false' && steps.check.outputs.reviewer_comment_count >= 3
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh pr edit $PR_NUMBER --repo $REPO --add-label "needs-human-review" 2>/dev/null || \
+            gh api repos/$REPO/issues/$PR_NUMBER/labels -f labels[]="needs-human-review" || true
+          gh pr comment $PR_NUMBER --repo $REPO \
+            --body "reviewer の起動が3回に達しました。人間によるレビューが必要です。"
+
+      - name: Checkout
+        if: steps.check.outputs.already_passed == 'false' && steps.check.outputs.reviewer_comment_count < 3
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare reviewer context
+        if: steps.check.outputs.already_passed == 'false' && steps.check.outputs.reviewer_comment_count < 3
+        id: context
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          # PR 本文から issue 番号を抽出
+          PR_BODY=$(gh pr view $PR_NUMBER --repo $REPO --json body --jq '.body')
+          ISSUE_NUM=$(echo "$PR_BODY" | grep -oP '(?i)(?:closes|fixes|resolves)\s+#\K\d+' | head -1)
+
+          if [ -z "$ISSUE_NUM" ]; then
+            echo "issue_found=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "issue_found=true" >> $GITHUB_OUTPUT
+          echo "issue_num=$ISSUE_NUM" >> $GITHUB_OUTPUT
+
+          # issue 本文取得
+          ISSUE_BODY=$(gh issue view $ISSUE_NUM --repo $REPO --json body --jq '.body')
+
+          # 変更ファイル一覧取得
+          CHANGED_FILES=$(git diff --name-only origin/main...HEAD)
+
+          # 前回の reviewer コメント取得（あれば）
+          PREV_REVIEW=$(gh api repos/$REPO/issues/$PR_NUMBER/comments \
+            --jq '[.[] | select(.user.login == "copilot-swe-agent")] | last | .body // "(前回の指摘なし)"')
+
+          # PR 本文末尾に context を追記
+          CURRENT_BODY=$(gh pr view $PR_NUMBER --repo $REPO --json body --jq '.body')
+
+          # 既存の reviewer-context 区間を除去して再追記
+          CLEAN_BODY=$(echo "$CURRENT_BODY" | sed '/<!-- reviewer-context-start -->/,/<!-- reviewer-context-end -->/d')
+
+          NEW_BODY="${CLEAN_BODY}
+
+          <!-- reviewer-context-start -->
+          <details><summary>reviewer context (自動生成)</summary>
+
+          ## リンク issue: #${ISSUE_NUM}
+
+          ### issue 本文
+          ${ISSUE_BODY}
+
+          ### 変更ファイル一覧
+          \`\`\`
+          ${CHANGED_FILES}
+          \`\`\`
+
+          ### 前回の reviewer コメント
+          ${PREV_REVIEW}
+
+          </details>
+          <!-- reviewer-context-end -->"
+
+          gh pr edit $PR_NUMBER --repo $REPO --body "$NEW_BODY"
+
+      - name: Post @copilot reviewer mention
+        if: steps.check.outputs.already_passed == 'false' && steps.check.outputs.reviewer_comment_count < 3 && steps.context.outputs.issue_found == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          ISSUE_NUM: ${{ steps.context.outputs.issue_num }}
+        run: |
+          gh pr comment $PR_NUMBER --repo $REPO --body \
+            "@copilot あなたは reviewer エージェントです。
+
+          このPRが issue #${ISSUE_NUM} の受入基準を満たしているか機械検証してください。
+
+          **重要:**
+          - PR本文の \`<!-- reviewer-context-start -->\` から \`<!-- reviewer-context-end -->\` の区間に issue 本文・変更ファイル一覧・前回指摘が含まれています
+          - コードを変更してはいけません
+          - コメント投稿のみで作業を終了してください
+          - 受入基準を1つずつ execute で実行して検証してください
+          - 全項目 pass の場合のみ \`<!-- review-passed -->\` マーカーをコメント末尾に付けてください"
+
+      - name: Skip if issue not found
+        if: steps.check.outputs.already_passed == 'false' && steps.check.outputs.reviewer_comment_count < 3 && steps.context.outputs.issue_found == 'false'
+        run: echo "PR 本文に Closes #N が見つかりませんでした。reviewer を起動しません。"
