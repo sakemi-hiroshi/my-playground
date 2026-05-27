@@ -22,11 +22,11 @@ func (a *PointActor) Receive(ctx actor.Context) {
 }
 
 func (a *PointActor) handleUse(ctx actor.Context, msg UsePoint) {
-	switch msg.FailMode.Kind {
+	switch msg.FaultInjection.Kind {
 	case Fail:
 		ctx.Respond(PointRejected{OrderID: msg.OrderID, Reason: "simulated failure"})
 	case Delay:
-		time.Sleep(msg.FailMode.Delay)
+		time.Sleep(msg.FaultInjection.Delay)
 		ctx.Respond(PointUsed{OrderID: msg.OrderID, Amount: msg.Amount})
 	case Panic:
 		panic("simulated panic")

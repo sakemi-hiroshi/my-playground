@@ -6,9 +6,9 @@ import (
 
 type (
 	FailModes struct {
-		Coupon  FailMode
-		Point   FailMode
-		Payment FailMode
+		Coupon  FaultInjection
+		Point   FaultInjection
+		Payment FaultInjection
 	}
 
 	StartOrder struct {

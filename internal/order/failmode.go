@@ -12,8 +12,8 @@ const (
 	NoReply Kind = "noreply"
 )
 
-// FailMode はテストでエラーや遅延をシミュレートするための構造体です。
-type FailMode struct {
+// FaultInjection はテストでエラーや遅延をシミュレートするための構造体です。
+type FaultInjection struct {
 	Kind  Kind
 	Delay time.Duration
 }

@@ -2,9 +2,9 @@ package order
 
 type (
 	Charge struct {
-		OrderID   string
-		AmountYen int
-		FailMode  FailMode
+		OrderID        string
+		AmountYen      int
+		FaultInjection FaultInjection
 	}
 
 	PaymentCompleted struct {

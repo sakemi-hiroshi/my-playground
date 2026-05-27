@@ -24,26 +24,26 @@ func TestCouponActor_ApplyCoupon(t *testing.T) {
 			timeout:  time.Second,
 		},
 		{
-			name:     "FailMode=fail_CouponRejectedが返る",
-			msg:      ApplyCoupon{OrderID: "ord-2", CouponID: "C100", FailMode: FailMode{Kind: Fail}},
+			name:     "FaultInjection=fail_CouponRejectedが返る",
+			msg:      ApplyCoupon{OrderID: "ord-2", CouponID: "C100", FaultInjection: FaultInjection{Kind: Fail}},
 			wantType: CouponRejected{},
 			timeout:  time.Second,
 		},
 		{
-			name:     "FailMode=delay_遅延後にCouponAppliedが返る",
-			msg:      ApplyCoupon{OrderID: "ord-3", CouponID: "C100", FailMode: FailMode{Kind: Delay, Delay: 100 * time.Millisecond}},
+			name:     "FaultInjection=delay_遅延後にCouponAppliedが返る",
+			msg:      ApplyCoupon{OrderID: "ord-3", CouponID: "C100", FaultInjection: FaultInjection{Kind: Delay, Delay: 100 * time.Millisecond}},
 			wantType: CouponApplied{},
 			timeout:  time.Second,
 		},
 		{
-			name:        "FailMode=noreply_タイムアウトになる",
-			msg:         ApplyCoupon{OrderID: "ord-4", CouponID: "C100", FailMode: FailMode{Kind: NoReply}},
+			name:        "FaultInjection=noreply_タイムアウトになる",
+			msg:         ApplyCoupon{OrderID: "ord-4", CouponID: "C100", FaultInjection: FaultInjection{Kind: NoReply}},
 			wantTimeout: true,
 			timeout:     200 * time.Millisecond,
 		},
 		{
-			name:        "FailMode=panic_応答なしになる",
-			msg:         ApplyCoupon{OrderID: "ord-5", CouponID: "C100", FailMode: FailMode{Kind: Panic}},
+			name:        "FaultInjection=panic_応答なしになる",
+			msg:         ApplyCoupon{OrderID: "ord-5", CouponID: "C100", FaultInjection: FaultInjection{Kind: Panic}},
 			wantTimeout: true,
 			timeout:     500 * time.Millisecond,
 		},
@@ -90,7 +90,7 @@ func TestCouponActor_panic後にRestartして動作すること(t *testing.T) {
 
 	// panic させる（応答なしを期待）
 	_, err := system.Root.RequestFuture(pid, ApplyCoupon{
-		OrderID: "ord-5", CouponID: "C100", FailMode: FailMode{Kind: Panic},
+		OrderID: "ord-5", CouponID: "C100", FaultInjection: FaultInjection{Kind: Panic},
 	}, 500*time.Millisecond).Result()
 	assert.Error(t, err)
 
