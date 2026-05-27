@@ -1,4 +1,4 @@
-package order_test
+package order
 
 import (
 	"sync"
@@ -6,10 +6,6 @@ import (
 	"time"
 
 	"github.com/asynkron/protoactor-go/actor"
-	"github.com/sakemi-hiroshi/my-playground/internal/order"
-	"github.com/sakemi-hiroshi/my-playground/internal/service/coupon"
-	"github.com/sakemi-hiroshi/my-playground/internal/service/payment"
-	"github.com/sakemi-hiroshi/my-playground/internal/service/point"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -44,12 +40,12 @@ type stubCouponActor struct {
 
 func (s *stubCouponActor) Receive(ctx actor.Context) {
 	switch msg := ctx.Message().(type) {
-	case coupon.ApplyCoupon:
+	case ApplyCoupon:
 		_ = msg
 		ctx.Respond(s.applyResult)
-	case coupon.ReleaseCoupon:
+	case ReleaseCoupon:
 		s.rec.record("coupon.release")
-		ctx.Respond(coupon.CouponReleased{OrderID: msg.OrderID})
+		ctx.Respond(CouponReleased{OrderID: msg.OrderID})
 	}
 }
 
@@ -60,12 +56,12 @@ type stubPointActor struct {
 
 func (s *stubPointActor) Receive(ctx actor.Context) {
 	switch msg := ctx.Message().(type) {
-	case point.UsePoint:
+	case UsePoint:
 		_ = msg
 		ctx.Respond(s.useResult)
-	case point.RefundPoint:
+	case RefundPoint:
 		s.rec.record("point.refund")
-		ctx.Respond(point.PointRefunded{OrderID: msg.OrderID})
+		ctx.Respond(PointRefunded{OrderID: msg.OrderID})
 	}
 }
 
@@ -76,12 +72,12 @@ type stubPaymentActor struct {
 
 func (s *stubPaymentActor) Receive(ctx actor.Context) {
 	switch msg := ctx.Message().(type) {
-	case payment.Charge:
+	case Charge:
 		_ = msg
 		ctx.Respond(s.chargeResult)
-	case payment.Refund:
+	case Refund:
 		s.rec.record("payment.refund")
-		ctx.Respond(payment.PaymentRefunded{OrderID: msg.OrderID})
+		ctx.Respond(PaymentRefunded{OrderID: msg.OrderID})
 	}
 }
 
@@ -89,40 +85,40 @@ func (s *stubPaymentActor) Receive(ctx actor.Context) {
 
 func TestOrderActor_SagaFlow(t *testing.T) {
 	tests := []struct {
-		name               string
-		couponResult       interface{}
-		pointResult        interface{}
-		paymentResult      interface{}
-		wantStatus         order.OrderStatus
-		wantCompensations  []string
+		name              string
+		couponResult      interface{}
+		pointResult       interface{}
+		paymentResult     interface{}
+		wantStatus        OrderStatus
+		wantCompensations []string
 	}{
 		{
 			name:              "全成功_completed",
-			couponResult:      coupon.CouponApplied{OrderID: "o1", CouponID: "C100", DiscountYen: 100},
-			pointResult:       point.PointUsed{OrderID: "o1", Amount: 100},
-			paymentResult:     payment.PaymentCompleted{OrderID: "o1", AmountYen: 900},
-			wantStatus:        order.StatusCompleted,
+			couponResult:      CouponApplied{OrderID: "o1", CouponID: "C100", DiscountYen: 100},
+			pointResult:       PointUsed{OrderID: "o1", Amount: 100},
+			paymentResult:     PaymentCompleted{OrderID: "o1", AmountYen: 900},
+			wantStatus:        StatusCompleted,
 			wantCompensations: []string{},
 		},
 		{
 			name:              "クーポン失敗_補償なし_failed",
-			couponResult:      coupon.CouponRejected{OrderID: "o1", Reason: "invalid coupon"},
-			wantStatus:        order.StatusFailed,
+			couponResult:      CouponRejected{OrderID: "o1", Reason: "invalid coupon"},
+			wantStatus:        StatusFailed,
 			wantCompensations: []string{},
 		},
 		{
 			name:              "ポイント失敗_クーポンのみ補償_failed",
-			couponResult:      coupon.CouponApplied{OrderID: "o1", CouponID: "C100", DiscountYen: 100},
-			pointResult:       point.PointRejected{OrderID: "o1", Reason: "insufficient points"},
-			wantStatus:        order.StatusFailed,
+			couponResult:      CouponApplied{OrderID: "o1", CouponID: "C100", DiscountYen: 100},
+			pointResult:       PointRejected{OrderID: "o1", Reason: "insufficient points"},
+			wantStatus:        StatusFailed,
 			wantCompensations: []string{"coupon.release"},
 		},
 		{
 			name:              "決済失敗_ポイントとクーポンを逆順補償_failed",
-			couponResult:      coupon.CouponApplied{OrderID: "o1", CouponID: "C100", DiscountYen: 100},
-			pointResult:       point.PointUsed{OrderID: "o1", Amount: 100},
-			paymentResult:     payment.PaymentFailed{OrderID: "o1", Reason: "card declined"},
-			wantStatus:        order.StatusFailed,
+			couponResult:      CouponApplied{OrderID: "o1", CouponID: "C100", DiscountYen: 100},
+			pointResult:       PointUsed{OrderID: "o1", Amount: 100},
+			paymentResult:     PaymentFailed{OrderID: "o1", Reason: "card declined"},
+			wantStatus:        StatusFailed,
 			wantCompensations: []string{"point.refund", "coupon.release"},
 		},
 	}
@@ -143,8 +139,8 @@ func TestOrderActor_SagaFlow(t *testing.T) {
 				return &stubPaymentActor{chargeResult: tt.paymentResult, rec: rec}
 			}))
 
-			orderPID := system.Root.Spawn(order.NewOrderActorProps(couponPID, pointPID, paymentPID))
-			res, err := system.Root.RequestFuture(orderPID, order.StartOrder{
+			orderPID := system.Root.Spawn(NewOrderActorProps(couponPID, pointPID, paymentPID))
+			res, err := system.Root.RequestFuture(orderPID, StartOrder{
 				OrderID:     "o1",
 				CouponID:    "C100",
 				PointAmount: 100,
@@ -152,7 +148,7 @@ func TestOrderActor_SagaFlow(t *testing.T) {
 			}, 5*time.Second).Result()
 
 			require.NoError(t, err)
-			got, ok := res.(order.OrderResult)
+			got, ok := res.(OrderResult)
 			require.True(t, ok)
 			assert.Equal(t, tt.wantStatus, got.Status)
 			assert.Equal(t, tt.wantCompensations, rec.snapshot())

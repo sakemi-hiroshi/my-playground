@@ -1,10 +1,9 @@
-package coupon
+package order
 
 import (
 	"time"
 
 	"github.com/asynkron/protoactor-go/actor"
-	"github.com/sakemi-hiroshi/my-playground/internal/failmode"
 )
 
 type CouponActor struct{}
@@ -24,14 +23,14 @@ func (a *CouponActor) Receive(ctx actor.Context) {
 
 func (a *CouponActor) handleApply(ctx actor.Context, msg ApplyCoupon) {
 	switch msg.FailMode.Kind {
-	case failmode.Fail:
+	case Fail:
 		ctx.Respond(CouponRejected{OrderID: msg.OrderID, Reason: "simulated failure"})
-	case failmode.Delay:
+	case Delay:
 		time.Sleep(msg.FailMode.Delay)
 		ctx.Respond(CouponApplied{OrderID: msg.OrderID, CouponID: msg.CouponID, DiscountYen: 100})
-	case failmode.Panic:
+	case Panic:
 		panic("simulated panic")
-	case failmode.NoReply:
+	case NoReply:
 		// 応答しない
 	default:
 		ctx.Respond(CouponApplied{OrderID: msg.OrderID, CouponID: msg.CouponID, DiscountYen: 100})

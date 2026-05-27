@@ -1,12 +1,10 @@
-package payment
-
-import "github.com/sakemi-hiroshi/my-playground/internal/failmode"
+package order
 
 type (
 	Charge struct {
 		OrderID   string
 		AmountYen int
-		FailMode  failmode.FailMode
+		FailMode  FailMode
 	}
 
 	PaymentCompleted struct {

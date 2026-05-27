@@ -4,9 +4,6 @@ import (
 	"time"
 
 	"github.com/asynkron/protoactor-go/actor"
-	"github.com/sakemi-hiroshi/my-playground/internal/service/coupon"
-	"github.com/sakemi-hiroshi/my-playground/internal/service/payment"
-	"github.com/sakemi-hiroshi/my-playground/internal/service/point"
 )
 
 const receiveTimeout = 3 * time.Second
@@ -51,7 +48,7 @@ func (a *OrderActor) initial(ctx actor.Context) {
 	a.msg = msg
 	a.replyTo = ctx.Sender()
 
-	ctx.Request(a.couponPID, coupon.ApplyCoupon{
+	ctx.Request(a.couponPID, ApplyCoupon{
 		OrderID:  msg.OrderID,
 		CouponID: msg.CouponID,
 		FailMode: msg.FailModes.Coupon,
@@ -68,12 +65,12 @@ func (a *OrderActor) initial(ctx actor.Context) {
 
 func (a *OrderActor) awaitingCoupon(ctx actor.Context) {
 	switch msg := ctx.Message().(type) {
-	case coupon.CouponApplied:
+	case CouponApplied:
 		ctx.CancelReceiveTimeout()
 		a.comps.push(func(ctx actor.Context) {
-			ctx.Request(a.couponPID, coupon.ReleaseCoupon{OrderID: a.msg.OrderID, CouponID: a.msg.CouponID})
+			ctx.Request(a.couponPID, ReleaseCoupon{OrderID: a.msg.OrderID, CouponID: a.msg.CouponID})
 		})
-		ctx.Request(a.pointPID, point.UsePoint{
+		ctx.Request(a.pointPID, UsePoint{
 			OrderID:  a.msg.OrderID,
 			Amount:   a.msg.PointAmount,
 			FailMode: a.msg.FailModes.Point,
@@ -86,7 +83,7 @@ func (a *OrderActor) awaitingCoupon(ctx actor.Context) {
 			Detail: msg.CouponID, At: time.Now(),
 		})
 
-	case coupon.CouponRejected:
+	case CouponRejected:
 		ctx.CancelReceiveTimeout()
 		ctx.ActorSystem().EventStream.Publish(SagaEvent{
 			OrderID: a.msg.OrderID, Phase: "failed",
@@ -103,12 +100,12 @@ func (a *OrderActor) awaitingCoupon(ctx actor.Context) {
 
 func (a *OrderActor) awaitingPoint(ctx actor.Context) {
 	switch msg := ctx.Message().(type) {
-	case point.PointUsed:
+	case PointUsed:
 		ctx.CancelReceiveTimeout()
 		a.comps.push(func(ctx actor.Context) {
-			ctx.Request(a.pointPID, point.RefundPoint{OrderID: a.msg.OrderID, Amount: a.msg.PointAmount})
+			ctx.Request(a.pointPID, RefundPoint{OrderID: a.msg.OrderID, Amount: a.msg.PointAmount})
 		})
-		ctx.Request(a.paymentPID, payment.Charge{
+		ctx.Request(a.paymentPID, Charge{
 			OrderID:   a.msg.OrderID,
 			AmountYen: a.msg.AmountYen,
 			FailMode:  a.msg.FailModes.Payment,
@@ -121,7 +118,7 @@ func (a *OrderActor) awaitingPoint(ctx actor.Context) {
 			Detail: "ok", At: time.Now(),
 		})
 
-	case point.PointRejected:
+	case PointRejected:
 		ctx.CancelReceiveTimeout()
 		ctx.ActorSystem().EventStream.Publish(SagaEvent{
 			OrderID: a.msg.OrderID, Phase: "compensating",
@@ -138,7 +135,7 @@ func (a *OrderActor) awaitingPoint(ctx actor.Context) {
 
 func (a *OrderActor) awaitingCharge(ctx actor.Context) {
 	switch msg := ctx.Message().(type) {
-	case payment.PaymentCompleted:
+	case PaymentCompleted:
 		ctx.CancelReceiveTimeout()
 		ctx.ActorSystem().EventStream.Publish(SagaEvent{
 			OrderID: a.msg.OrderID, Phase: "completed",
@@ -147,7 +144,7 @@ func (a *OrderActor) awaitingCharge(ctx actor.Context) {
 		a.finish(ctx, StatusCompleted, "")
 		_ = msg
 
-	case payment.PaymentFailed:
+	case PaymentFailed:
 		ctx.CancelReceiveTimeout()
 		ctx.ActorSystem().EventStream.Publish(SagaEvent{
 			OrderID: a.msg.OrderID, Phase: "compensating",
@@ -164,7 +161,7 @@ func (a *OrderActor) awaitingCharge(ctx actor.Context) {
 
 func (a *OrderActor) compensating(ctx actor.Context) {
 	switch ctx.Message().(type) {
-	case coupon.CouponReleased, point.PointRefunded, payment.PaymentRefunded:
+	case CouponReleased, PointRefunded, PaymentRefunded:
 		if a.comps.len() > 0 {
 			a.comps.dispatchNext(ctx)
 			return

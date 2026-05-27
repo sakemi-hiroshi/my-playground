@@ -1,12 +1,10 @@
-package point
-
-import "github.com/sakemi-hiroshi/my-playground/internal/failmode"
+package order
 
 type (
 	UsePoint struct {
 		OrderID  string
 		Amount   int
-		FailMode failmode.FailMode
+		FailMode FailMode
 	}
 
 	PointUsed struct {

@@ -1,10 +1,9 @@
-package point
+package order
 
 import (
 	"time"
 
 	"github.com/asynkron/protoactor-go/actor"
-	"github.com/sakemi-hiroshi/my-playground/internal/failmode"
 )
 
 type PointActor struct{}
@@ -24,14 +23,14 @@ func (a *PointActor) Receive(ctx actor.Context) {
 
 func (a *PointActor) handleUse(ctx actor.Context, msg UsePoint) {
 	switch msg.FailMode.Kind {
-	case failmode.Fail:
+	case Fail:
 		ctx.Respond(PointRejected{OrderID: msg.OrderID, Reason: "simulated failure"})
-	case failmode.Delay:
+	case Delay:
 		time.Sleep(msg.FailMode.Delay)
 		ctx.Respond(PointUsed{OrderID: msg.OrderID, Amount: msg.Amount})
-	case failmode.Panic:
+	case Panic:
 		panic("simulated panic")
-	case failmode.NoReply:
+	case NoReply:
 		// 応答しない
 	default:
 		ctx.Respond(PointUsed{OrderID: msg.OrderID, Amount: msg.Amount})
