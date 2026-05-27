@@ -48,6 +48,21 @@ go test ./...
 - コミットメッセージ・PR タイトル・PR 本文・issue コメントはすべて日本語
 - 基本は **draft PR** として作成（Ready for Review は人間が判断）
 
+### Step 6: reviewer エージェントの起動
+
+PR 作成後、以下のコマンドを execute で実行して reviewer エージェントを起動する:
+
+```bash
+gh agent-task create \
+  --repo <OWNER/REPO> \
+  --custom-agent reviewer \
+  "PR #<PR番号> が issue #<ISSUE番号> の受入基準を満たしているか機械検証してください。コードは変更せず、コメントのみで結果を返してください。"
+```
+
+- `<OWNER/REPO>` はリポジトリ名に置き換える
+- `<PR番号>` と `<ISSUE番号>` は実際の番号に置き換える
+- コマンドが失敗した場合はスキップしてよい（reviewer 起動は best-effort）
+
 ## 制約
 
 - 外部依存ライブラリの追加禁止（標準ライブラリのみ）
