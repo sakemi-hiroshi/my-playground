@@ -6,7 +6,7 @@ import (
 	"github.com/asynkron/protoactor-go/actor"
 )
 
-const receiveTimeout = 3 * time.Second
+var receiveTimeout = 3 * time.Second
 
 type OrderActor struct {
 	behavior actor.Behavior
@@ -17,9 +17,10 @@ type OrderActor struct {
 	paymentPID *actor.PID
 
 	// Saga 実行中の状態
-	msg     StartOrder
-	replyTo *actor.PID
-	comps   compensations
+	msg        StartOrder
+	replyTo    *actor.PID
+	comps      compensations
+	retryCount int // フェーズ横断のグローバルカウンタ
 }
 
 func NewOrderActorProps(couponPID, pointPID, paymentPID *actor.PID) *actor.Props {
@@ -92,7 +93,17 @@ func (a *OrderActor) awaitingCoupon(ctx actor.Context) {
 		a.finish(ctx, StatusFailed, msg.Reason)
 
 	case *actor.ReceiveTimeout:
-		a.startCompensation(ctx, "timeout waiting CouponApplied")
+		if a.retryCount < a.msg.MaxRetries {
+			a.retryCount++
+			ctx.Request(a.couponPID, ApplyCoupon{
+				OrderID:        a.msg.OrderID,
+				CouponID:       a.msg.CouponID,
+				FaultInjection: a.msg.FailModes.Coupon,
+			})
+			ctx.SetReceiveTimeout(receiveTimeout)
+		} else {
+			a.startCompensation(ctx, "timeout waiting CouponApplied")
+		}
 	}
 }
 
@@ -127,7 +138,17 @@ func (a *OrderActor) awaitingPoint(ctx actor.Context) {
 		a.startCompensation(ctx, msg.Reason)
 
 	case *actor.ReceiveTimeout:
-		a.startCompensation(ctx, "timeout waiting PointUsed")
+		if a.retryCount < a.msg.MaxRetries {
+			a.retryCount++
+			ctx.Request(a.pointPID, UsePoint{
+				OrderID:        a.msg.OrderID,
+				Amount:         a.msg.PointAmount,
+				FaultInjection: a.msg.FailModes.Point,
+			})
+			ctx.SetReceiveTimeout(receiveTimeout)
+		} else {
+			a.startCompensation(ctx, "timeout waiting PointUsed")
+		}
 	}
 }
 
@@ -153,7 +174,17 @@ func (a *OrderActor) awaitingCharge(ctx actor.Context) {
 		a.startCompensation(ctx, msg.Reason)
 
 	case *actor.ReceiveTimeout:
-		a.startCompensation(ctx, "timeout waiting PaymentCompleted")
+		if a.retryCount < a.msg.MaxRetries {
+			a.retryCount++
+			ctx.Request(a.paymentPID, Charge{
+				OrderID:        a.msg.OrderID,
+				AmountYen:      a.msg.AmountYen,
+				FaultInjection: a.msg.FailModes.Payment,
+			})
+			ctx.SetReceiveTimeout(receiveTimeout)
+		} else {
+			a.startCompensation(ctx, "timeout waiting PaymentCompleted")
+		}
 	}
 }
 

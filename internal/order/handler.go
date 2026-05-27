@@ -26,6 +26,7 @@ type OrderRequest struct {
 	AmountYen         int              `json:"amount_yen"`
 	FailModes         FailModesRequest `json:"fail_modes"`
 	RandomFailureRate float64          `json:"random_failure_rate"`
+	MaxRetries        int              `json:"max_retries,omitempty"`
 }
 
 type OrderResponse struct {
@@ -70,6 +71,7 @@ func (h *OrderHandler) PostOrder(c echo.Context) error {
 		AmountYen:         req.AmountYen,
 		FailModes:         toOrderFailModes(req.FailModes),
 		RandomFailureRate: req.RandomFailureRate,
+		MaxRetries:        req.MaxRetries,
 	}, 10*time.Second)
 
 	res, err := fut.Result()
