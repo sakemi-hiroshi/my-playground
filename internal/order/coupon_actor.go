@@ -22,11 +22,11 @@ func (a *CouponActor) Receive(ctx actor.Context) {
 }
 
 func (a *CouponActor) handleApply(ctx actor.Context, msg ApplyCoupon) {
-	switch msg.FailMode.Kind {
+	switch msg.FaultInjection.Kind {
 	case Fail:
 		ctx.Respond(CouponRejected{OrderID: msg.OrderID, Reason: "simulated failure"})
 	case Delay:
-		time.Sleep(msg.FailMode.Delay)
+		time.Sleep(msg.FaultInjection.Delay)
 		ctx.Respond(CouponApplied{OrderID: msg.OrderID, CouponID: msg.CouponID, DiscountYen: 100})
 	case Panic:
 		panic("simulated panic")

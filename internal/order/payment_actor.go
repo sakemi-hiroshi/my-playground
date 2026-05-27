@@ -22,11 +22,11 @@ func (a *PaymentActor) Receive(ctx actor.Context) {
 }
 
 func (a *PaymentActor) handleCharge(ctx actor.Context, msg Charge) {
-	switch msg.FailMode.Kind {
+	switch msg.FaultInjection.Kind {
 	case Fail:
 		ctx.Respond(PaymentFailed{OrderID: msg.OrderID, Reason: "simulated failure"})
 	case Delay:
-		time.Sleep(msg.FailMode.Delay)
+		time.Sleep(msg.FaultInjection.Delay)
 		ctx.Respond(PaymentCompleted{OrderID: msg.OrderID, AmountYen: msg.AmountYen})
 	case Panic:
 		panic("simulated panic")

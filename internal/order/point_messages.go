@@ -2,9 +2,9 @@ package order
 
 type (
 	UsePoint struct {
-		OrderID  string
-		Amount   int
-		FailMode FailMode
+		OrderID        string
+		Amount         int
+		FaultInjection FaultInjection
 	}
 
 	PointUsed struct {

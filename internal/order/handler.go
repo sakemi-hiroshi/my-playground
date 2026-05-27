@@ -93,9 +93,9 @@ func toOrderFailModes(r FailModesRequest) FailModes {
 	}
 }
 
-func toFailMode(r FailModeRequest) FailMode {
+func toFailMode(r FailModeRequest) FaultInjection {
 	d, _ := time.ParseDuration(r.Delay)
-	return FailMode{
+	return FaultInjection{
 		Kind:  Kind(r.Kind),
 		Delay: d,
 	}

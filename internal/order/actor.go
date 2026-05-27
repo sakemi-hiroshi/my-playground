@@ -49,9 +49,9 @@ func (a *OrderActor) initial(ctx actor.Context) {
 	a.replyTo = ctx.Sender()
 
 	ctx.Request(a.couponPID, ApplyCoupon{
-		OrderID:  msg.OrderID,
-		CouponID: msg.CouponID,
-		FailMode: msg.FailModes.Coupon,
+		OrderID:        msg.OrderID,
+		CouponID:       msg.CouponID,
+		FaultInjection: msg.FailModes.Coupon,
 	})
 	ctx.SetReceiveTimeout(receiveTimeout)
 	a.behavior.Become(a.awaitingCoupon)
@@ -71,9 +71,9 @@ func (a *OrderActor) awaitingCoupon(ctx actor.Context) {
 			ctx.Request(a.couponPID, ReleaseCoupon{OrderID: a.msg.OrderID, CouponID: a.msg.CouponID})
 		})
 		ctx.Request(a.pointPID, UsePoint{
-			OrderID:  a.msg.OrderID,
-			Amount:   a.msg.PointAmount,
-			FailMode: a.msg.FailModes.Point,
+			OrderID:        a.msg.OrderID,
+			Amount:         a.msg.PointAmount,
+			FaultInjection: a.msg.FailModes.Point,
 		})
 		ctx.SetReceiveTimeout(receiveTimeout)
 		a.behavior.Become(a.awaitingPoint)
@@ -106,9 +106,9 @@ func (a *OrderActor) awaitingPoint(ctx actor.Context) {
 			ctx.Request(a.pointPID, RefundPoint{OrderID: a.msg.OrderID, Amount: a.msg.PointAmount})
 		})
 		ctx.Request(a.paymentPID, Charge{
-			OrderID:   a.msg.OrderID,
-			AmountYen: a.msg.AmountYen,
-			FailMode:  a.msg.FailModes.Payment,
+			OrderID:        a.msg.OrderID,
+			AmountYen:      a.msg.AmountYen,
+			FaultInjection: a.msg.FailModes.Payment,
 		})
 		ctx.SetReceiveTimeout(receiveTimeout)
 		a.behavior.Become(a.awaitingCharge)
