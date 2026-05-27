@@ -1,4 +1,4 @@
-package http
+package order
 
 import (
 	"net/http"
@@ -6,8 +6,6 @@ import (
 
 	"github.com/asynkron/protoactor-go/actor"
 	"github.com/labstack/echo/v4"
-	"github.com/sakemi-hiroshi/my-playground/internal/failmode"
-	"github.com/sakemi-hiroshi/my-playground/internal/order"
 )
 
 type FailModeRequest struct {
@@ -62,10 +60,10 @@ func (h *OrderHandler) PostOrder(c echo.Context) error {
 	}
 
 	// OrderActor を受注ごとに spawn（per-request actor）
-	pid := h.system.Root.Spawn(order.NewOrderActorProps(h.couponPID, h.pointPID, h.paymentPID))
+	pid := h.system.Root.Spawn(NewOrderActorProps(h.couponPID, h.pointPID, h.paymentPID))
 
 	// HTTP は同期境界なので RequestFuture で完了を待つ
-	fut := h.system.Root.RequestFuture(pid, order.StartOrder{
+	fut := h.system.Root.RequestFuture(pid, StartOrder{
 		OrderID:           req.OrderID,
 		CouponID:          req.CouponID,
 		PointAmount:       req.PointAmount,
@@ -79,7 +77,7 @@ func (h *OrderHandler) PostOrder(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusGatewayTimeout, "order processing timeout")
 	}
 
-	result := res.(order.OrderResult)
+	result := res.(OrderResult)
 	return c.JSON(http.StatusOK, OrderResponse{
 		OrderID: result.OrderID,
 		Status:  string(result.Status),
@@ -87,18 +85,18 @@ func (h *OrderHandler) PostOrder(c echo.Context) error {
 	})
 }
 
-func toOrderFailModes(r FailModesRequest) order.FailModes {
-	return order.FailModes{
+func toOrderFailModes(r FailModesRequest) FailModes {
+	return FailModes{
 		Coupon:  toFailMode(r.Coupon),
 		Point:   toFailMode(r.Point),
 		Payment: toFailMode(r.Payment),
 	}
 }
 
-func toFailMode(r FailModeRequest) failmode.FailMode {
+func toFailMode(r FailModeRequest) FailMode {
 	d, _ := time.ParseDuration(r.Delay)
-	return failmode.FailMode{
-		Kind:  failmode.Kind(r.Kind),
+	return FailMode{
+		Kind:  Kind(r.Kind),
 		Delay: d,
 	}
 }

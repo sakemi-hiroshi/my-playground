@@ -1,15 +1,14 @@
-package tracing
+package order
 
 import (
 	"log/slog"
 
 	"github.com/asynkron/protoactor-go/actor"
-	"github.com/sakemi-hiroshi/my-playground/internal/order"
 )
 
 func RegisterSagaTracer(system *actor.ActorSystem) {
 	system.EventStream.Subscribe(func(evt interface{}) {
-		e, ok := evt.(order.SagaEvent)
+		e, ok := evt.(SagaEvent)
 		if !ok {
 			return
 		}

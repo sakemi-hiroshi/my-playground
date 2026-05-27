@@ -2,15 +2,13 @@ package order
 
 import (
 	"time"
-
-	"github.com/sakemi-hiroshi/my-playground/internal/failmode"
 )
 
 type (
 	FailModes struct {
-		Coupon  failmode.FailMode
-		Point   failmode.FailMode
-		Payment failmode.FailMode
+		Coupon  FailMode
+		Point   FailMode
+		Payment FailMode
 	}
 
 	StartOrder struct {

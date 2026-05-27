@@ -1,10 +1,9 @@
-package payment
+package order
 
 import (
 	"time"
 
 	"github.com/asynkron/protoactor-go/actor"
-	"github.com/sakemi-hiroshi/my-playground/internal/failmode"
 )
 
 type PaymentActor struct{}
@@ -24,14 +23,14 @@ func (a *PaymentActor) Receive(ctx actor.Context) {
 
 func (a *PaymentActor) handleCharge(ctx actor.Context, msg Charge) {
 	switch msg.FailMode.Kind {
-	case failmode.Fail:
+	case Fail:
 		ctx.Respond(PaymentFailed{OrderID: msg.OrderID, Reason: "simulated failure"})
-	case failmode.Delay:
+	case Delay:
 		time.Sleep(msg.FailMode.Delay)
 		ctx.Respond(PaymentCompleted{OrderID: msg.OrderID, AmountYen: msg.AmountYen})
-	case failmode.Panic:
+	case Panic:
 		panic("simulated panic")
-	case failmode.NoReply:
+	case NoReply:
 		// 応答しない
 	default:
 		ctx.Respond(PaymentCompleted{OrderID: msg.OrderID, AmountYen: msg.AmountYen})

@@ -1,12 +1,10 @@
-package coupon
-
-import "github.com/sakemi-hiroshi/my-playground/internal/failmode"
+package order
 
 type (
 	ApplyCoupon struct {
 		OrderID  string
 		CouponID string
-		FailMode failmode.FailMode
+		FailMode FailMode
 	}
 
 	CouponApplied struct {
